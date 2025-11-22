@@ -1,0 +1,13 @@
+{
+  "name": "front_Arnold-ai",
+  "version": "1.0.0",
+  "description": "Frontend application for Arnold AI",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
