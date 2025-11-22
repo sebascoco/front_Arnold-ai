@@ -20,6 +20,15 @@ interface UserStats {
   lastWorkout: string | null;
 }
 
+interface UserProfile {
+  id: number;
+  name: string;
+  weight_kg?: number;
+  height_cm?: number;
+  experience_level?: string;
+  goal?: string;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const [loadingStats, setLoadingStats] = useState(true);
@@ -28,6 +37,10 @@ export default function HomeScreen() {
     currentStreak: 0,
     averageRPE: 0,
     lastWorkout: null,
+  });
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    id: 1,
+    name: "Champion",
   });
 
   // Setup inicial y cargar stats
@@ -39,24 +52,60 @@ export default function HomeScreen() {
           method: "POST",
         });
 
-        // Cargar stats reales del usuario
-        const statsResponse = await fetch(`${API_BASE_URL}/users/1/stats`);
-        if (statsResponse.ok) {
-          const realStats = await statsResponse.json();
-          setUserStats({
-            totalSessions: realStats.total_sessions || 0,
-            currentStreak: realStats.current_streak || 0,
-            averageRPE: realStats.average_rpe || 0,
-            lastWorkout: realStats.last_workout_date || null,
-          });
+        // Cargar perfil del usuario
+        const profileResponse = await fetch(`${API_BASE_URL}/users/1`).catch(() => ({ ok: false }));
+        if (profileResponse.ok && 'json' in profileResponse) {
+          try {
+            const profile = await profileResponse.json();
+            setUserProfile({
+              id: profile.id,
+              name: profile.name || "Champion",
+              weight_kg: profile.weight_kg,
+              height_cm: profile.height_cm,
+              experience_level: profile.experience_level,
+              goal: profile.goal,
+            });
+            console.log('Perfil del usuario cargado desde el backend');
+          } catch {
+            console.log('Error parseando perfil del usuario');
+            setUserProfile({
+              id: 1,
+              name: "Champion",
+              weight_kg: 75.5,
+              height_cm: 175,
+              experience_level: "intermedio",
+              goal: "ganar_fuerza",
+            });
+          }
         } else {
-          // Fallback a datos demo si no hay stats reales
-          setUserStats({
-            totalSessions: 0,
-            currentStreak: 0,
-            averageRPE: 0,
-            lastWorkout: null,
+          console.log("Backend no disponible, usando perfil demo");
+          setUserProfile({
+            id: 1,
+            name: "Champion",
+            weight_kg: 75.5,
+            height_cm: 175,
+            experience_level: "intermedio",
+            goal: "ganar_fuerza",
           });
+        }
+
+        // Cargar stats reales del usuario
+        const statsResponse = await fetch(`${API_BASE_URL}/users/1/stats`).catch(() => ({ ok: false }));
+        if (statsResponse.ok && 'json' in statsResponse) {
+          try {
+            const realStats = await statsResponse.json();
+            setUserStats({
+              totalSessions: realStats.total_sessions || 0,
+              currentStreak: realStats.current_streak || 0,
+              averageRPE: realStats.average_rpe || 0,
+              lastWorkout: realStats.last_workout_date || null,
+            });
+            console.log('Stats del usuario cargadas desde el backend');
+          } catch {
+            console.log('Error parseando stats del usuario');
+          }
+        } else {
+          console.log("Stats no disponibles, usando valores por defecto");
         }
       } catch (e) {
         console.log("Error inicializando app:", e);
@@ -74,6 +123,27 @@ export default function HomeScreen() {
 
     initializeApp();
   }, []);
+
+  const calculateBMI = (weight: number, height: number): number => {
+    const heightInMeters = height / 100;
+    return Math.round((weight / (heightInMeters * heightInMeters)) * 10) / 10;
+  };
+
+  const getBMICategory = (bmi: number): string => {
+    if (bmi < 18.5) return "Bajo peso";
+    if (bmi < 25) return "Normal";
+    if (bmi < 30) return "Sobrepeso";
+    return "Obesidad";
+  };
+
+  const getExperienceEmoji = (level?: string): string => {
+    switch (level?.toLowerCase()) {
+      case 'principiante': return '🌱';
+      case 'intermedio': return '💪';
+      case 'avanzado': return '🏆';
+      default: return '💪';
+    }
+  };
 
   const handleOpenGeneralChat = () => {
     router.push("/general-chat");
@@ -105,8 +175,13 @@ export default function HomeScreen() {
               style={styles.arnoldImage}
             />
             <View style={styles.welcomeText}>
-              <Text style={styles.title}>¡Hola, Champion!</Text>
+              <Text style={styles.title}>¡Hola, {userProfile.name}!</Text>
               <Text style={styles.subtitle}>
+                {userProfile.height_cm ? `${userProfile.height_cm}cm • ` : ''}
+                {userProfile.weight_kg && userProfile.height_cm 
+                  ? `${getBMICategory(calculateBMI(userProfile.weight_kg, userProfile.height_cm))} • `
+                  : ''
+                }
                 Arnold está listo para entrenar contigo
               </Text>
             </View>
@@ -126,12 +201,21 @@ export default function HomeScreen() {
               <Text style={styles.statLabel}>Racha actual</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{userStats.averageRPE.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>RPE promedio</Text>
+              <Text style={styles.statNumber}>
+                {userProfile.weight_kg ? `${userProfile.weight_kg}kg` : '---'}
+              </Text>
+              <Text style={styles.statLabel}>Peso actual</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>💪</Text>
-              <Text style={styles.statLabel}>Nivel actual</Text>
+              <Text style={styles.statNumber}>
+                {getExperienceEmoji(userProfile.experience_level)}
+              </Text>
+              <Text style={styles.statLabel}>
+                {userProfile.experience_level ? 
+                  userProfile.experience_level.charAt(0).toUpperCase() + userProfile.experience_level.slice(1) 
+                  : 'Nivel actual'
+                }
+              </Text>
             </View>
           </View>
         </View>

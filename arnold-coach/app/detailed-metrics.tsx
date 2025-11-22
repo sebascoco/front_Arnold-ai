@@ -6,11 +6,11 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ViewStyle,
   TextStyle,
 } from 'react-native';
 import { router } from 'expo-router';
+import { API_BASE_URL } from '../constants/api';
 
 interface DetailedMetrics {
   totalWorkouts: number;
@@ -61,6 +61,73 @@ export default function DetailedMetricsScreen() {
 
   const loadDetailedMetrics = async () => {
     try {
+      // Intentar cargar datos reales del backend
+      const [
+        statsResponse,
+        strengthResponse,
+        consistencyResponse,
+        muscleGroupResponse,
+        volumeResponse
+      ] = await Promise.all([
+        fetch(`${API_BASE_URL}/users/1/stats`),
+        fetch(`${API_BASE_URL}/users/1/strength-progression`),
+        fetch(`${API_BASE_URL}/users/1/consistency-analysis`),
+        fetch(`${API_BASE_URL}/users/1/muscle-group-frequency`),
+        fetch(`${API_BASE_URL}/users/1/volume-analysis`)
+      ]);
+
+      if (statsResponse.ok && strengthResponse.ok && consistencyResponse.ok && 
+          muscleGroupResponse.ok && volumeResponse.ok) {
+        // Si todos los endpoints responden correctamente, usar datos reales
+        const statsData = await statsResponse.json();
+        const strengthData = await strengthResponse.json();
+        const consistencyData = await consistencyResponse.json();
+        const muscleGroupData = await muscleGroupResponse.json();
+        const volumeData = await volumeResponse.json();
+
+        setMetrics({
+          totalWorkouts: statsData.total_sessions || 0,
+          averageWorkoutDuration: Math.round(statsData.average_duration_minutes || 0),
+          totalVolumeLifted: Math.round(statsData.total_volume_kg || 0),
+          strengthProgression: strengthData.map((item: any) => ({
+            exercise: item.exercise_name,
+            initialWeight: item.initial_weight,
+            currentWeight: item.current_weight,
+            improvement: item.improvement_percentage,
+          })) || [],
+          weeklyConsistency: consistencyData.map((item: any) => ({
+            week: item.week_label,
+            completedDays: item.completed_days,
+            targetDays: item.target_days,
+          })) || [],
+          muscleGroupAnalysis: muscleGroupData.map((item: any) => ({
+            name: item.muscle_group,
+            totalSets: item.total_sets,
+            averageRPE: parseFloat(item.average_rpe?.toFixed(1) || '0'),
+            lastTrained: item.last_trained_date,
+            strength: item.average_rpe <= 7.0 ? 'fuerte' : 
+                     item.average_rpe <= 8.5 ? 'moderado' : 'débil' as 'fuerte' | 'moderado' | 'débil',
+          })) || [],
+          monthlyProgress: volumeData.map((item: any) => ({
+            month: item.month_number === '09' ? 'Sep' :
+                   item.month_number === '10' ? 'Oct' :
+                   item.month_number === '11' ? 'Nov' : 
+                   item.month_number === '12' ? 'Dic' : 
+                   `M${item.month_number}`,
+            workouts: item.workouts_count,
+            volume: Math.round(item.total_volume || 0),
+            avgRPE: parseFloat(item.avg_rpe?.toFixed(1) || '0'),
+          })) || [],
+        });
+
+        console.log('Métricas detalladas cargadas desde el backend');
+      } else {
+        throw new Error('API endpoints no disponibles');
+      }
+    } catch {
+      console.log('Backend no disponible, usando datos demo para métricas detalladas');
+      
+      // Fallback a datos demo si el backend no está disponible
       setMetrics({
         totalWorkouts: 28,
         averageWorkoutDuration: 67,
@@ -120,9 +187,6 @@ export default function DetailedMetricsScreen() {
           { month: 'Nov', workouts: 8, volume: 5420, avgRPE: 7.6 },
         ],
       });
-    } catch (error) {
-      console.error('Error loading detailed metrics:', error);
-      Alert.alert('Error', 'No se pudieron cargar las métricas detalladas');
     } finally {
       setLoading(false);
     }
@@ -278,7 +342,7 @@ export default function DetailedMetricsScreen() {
         <Text style={styles.sectionTitle}>Insights de Arnold</Text>
         <View style={styles.insightCard}>
           <Text style={styles.insightText}>
-            🎯 Tu consistencia ha mejorado en las últimas semanas. ¡Sigue así, champion!
+             Tu consistencia ha mejorado en las últimas semanas. ¡Sigue así!
           </Text>
         </View>
       </View>
