@@ -1,112 +1,438 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { router } from 'expo-router';
+import { API_BASE_URL } from '../../constants/api';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+interface ProgressData {
+  totalSessions: number;
+  currentStreak: number;
+  averageRPE: number;
+  totalVolume: number;
+  lastWorkoutDate: string | null;
+  weeklyProgress: {
+    week: string;
+    sessions: number;
+    volume: number;
+  }[];
+  muscleGroupStats: {
+    name: string;
+    frequency: number;
+    lastTrained: string;
+  }[];
+}
 
-export default function TabTwoScreen() {
+export default function ProgressScreen() {
+  const [progressData, setProgressData] = useState<ProgressData>({
+    totalSessions: 0,
+    currentStreak: 0,
+    averageRPE: 0,
+    totalVolume: 0,
+    lastWorkoutDate: null,
+    weeklyProgress: [],
+    muscleGroupStats: [],
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProgressData();
+  }, []);
+
+  const loadProgressData = async () => {
+    try {
+      // Intentar cargar datos reales del backend
+      const [
+        statsResponse,
+        muscleGroupResponse
+      ] = await Promise.all([
+        fetch(`${API_BASE_URL}/users/1/stats`),
+        fetch(`${API_BASE_URL}/users/1/muscle-group-frequency`)
+      ]);
+
+      let realProgressData = {
+        totalSessions: 0,
+        currentStreak: 0,
+        averageRPE: 0,
+        totalVolume: 0,
+        lastWorkoutDate: null,
+        weeklyProgress: [],
+        muscleGroupStats: [],
+      };
+
+      // Cargar stats básicas si están disponibles
+      if (statsResponse.ok) {
+        const stats = await statsResponse.json();
+        realProgressData.totalSessions = stats.total_sessions || 0;
+        realProgressData.currentStreak = stats.current_streak || 0;
+        realProgressData.averageRPE = stats.average_rpe || 0;
+        realProgressData.totalVolume = stats.total_volume_kg || 0;
+        realProgressData.lastWorkoutDate = stats.last_workout_date;
+      }
+
+      // Cargar stats de grupos musculares si están disponibles
+      if (muscleGroupResponse.ok) {
+        const muscleGroups = await muscleGroupResponse.json();
+        realProgressData.muscleGroupStats = muscleGroups.map((mg: any) => ({
+          name: mg.muscle_group,
+          frequency: mg.total_sessions,
+          lastTrained: mg.last_trained_date,
+        }));
+      }
+
+      // Si tenemos datos reales, usarlos; si no, usar datos demo
+      if (realProgressData.totalSessions > 0) {
+        setProgressData(realProgressData);
+      } else {
+        // Fallback a datos simulados
+        setProgressData({
+          totalSessions: 24,
+          currentStreak: 5,
+          averageRPE: 7.3,
+          totalVolume: 12500,
+          lastWorkoutDate: '2025-11-21',
+          weeklyProgress: [
+            { week: 'Sem 1', sessions: 3, volume: 2100 },
+            { week: 'Sem 2', sessions: 4, volume: 2350 },
+            { week: 'Sem 3', sessions: 3, volume: 2200 },
+            { week: 'Sem 4', sessions: 4, volume: 2500 },
+          ],
+          muscleGroupStats: [
+            { name: 'Pecho', frequency: 8, lastTrained: '2025-11-19' },
+            { name: 'Espalda', frequency: 6, lastTrained: '2025-11-20' },
+            { name: 'Piernas', frequency: 10, lastTrained: '2025-11-21' },
+            { name: 'Hombros', frequency: 5, lastTrained: '2025-11-18' },
+          ],
+        });
+      }
+    } catch (error) {
+      console.error('Error loading progress data:', error);
+      // Usar datos demo como fallback en caso de error
+      setProgressData({
+        totalSessions: 0,
+        currentStreak: 0,
+        averageRPE: 0,
+        totalVolume: 0,
+        lastWorkoutDate: null,
+        weeklyProgress: [],
+        muscleGroupStats: [],
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  };
+
+  const StatCard = ({ title, value, subtitle, color = '#22c55e' }: {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    color?: string;
+  }) => (
+    <View style={styles.statCard}>
+      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+    </View>
+  );
+
+  const ProgressBar = ({ percentage, color = '#22c55e' }: { percentage: number; color?: string }) => (
+    <View style={styles.progressBarContainer}>
+      <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Cargando tu progreso...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Tu Progreso</Text>
+          <Text style={styles.headerSubtitle}>
+            Sigue así, champion! 💪
+          </Text>
+        </View>
+
+        {/* Main Stats */}
+        <View style={styles.statsGrid}>
+          <StatCard 
+            title="Sesiones" 
+            value={progressData.totalSessions}
+            subtitle="completadas"
+          />
+          <StatCard 
+            title="Racha" 
+            value={progressData.currentStreak}
+            subtitle="días"
+            color="#f59e0b"
+          />
+          <StatCard 
+            title="RPE Promedio" 
+            value={progressData.averageRPE.toFixed(1)}
+            subtitle="intensidad"
+            color="#3b82f6"
+          />
+          <StatCard 
+            title="Volumen Total" 
+            value={`${(progressData.totalVolume / 1000).toFixed(1)}k`}
+            subtitle="kg movidos"
+            color="#ef4444"
+          />
+        </View>
+
+        {/* Weekly Progress Chart */}
+        <View style={styles.chartSection}>
+          <Text style={styles.sectionTitle}>Progreso Semanal</Text>
+          <View style={styles.chartContainer}>
+            {progressData.weeklyProgress.map((week, index) => (
+              <View key={index} style={styles.chartBar}>
+                <View style={styles.barContainer}>
+                  <View 
+                    style={[
+                      styles.bar,
+                      { 
+                        height: (week.sessions / 4) * 100,
+                        backgroundColor: '#22c55e',
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.chartLabel}>{week.week}</Text>
+                <Text style={styles.chartValue}>{week.sessions}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Muscle Groups */}
+        <View style={styles.muscleGroupSection}>
+          <Text style={styles.sectionTitle}>Grupos Musculares</Text>
+          {progressData.muscleGroupStats.map((muscle, index) => (
+            <View key={index} style={styles.muscleCard}>
+              <View style={styles.muscleInfo}>
+                <Text style={styles.muscleName}>{muscle.name}</Text>
+                <Text style={styles.muscleLastTrained}>
+                  Último: {formatDate(muscle.lastTrained)}
+                </Text>
+              </View>
+              <View style={styles.muscleStats}>
+                <Text style={styles.muscleFrequency}>{muscle.frequency}</Text>
+                <Text style={styles.muscleFrequencyLabel}>sesiones</Text>
+              </View>
+              <ProgressBar percentage={(muscle.frequency / 10) * 100} />
+            </View>
+          ))}
+        </View>
+
+        {/* Action Button */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/detailed-metrics')}
+          >
+            <Text style={styles.actionButtonText}>
+              📊 Ver análisis detallado
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 80 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#020617',
   },
-  titleContainer: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#F9FAFB',
+    fontSize: 16,
+  },
+  header: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F9FAFB',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#9CA3AF',
+  },
+  statsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    backgroundColor: '#111827',
+    padding: 16,
+    borderRadius: 12,
+    width: '48%',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  statTitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#22c55e',
+    marginBottom: 2,
+  },
+  statSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  chartSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F9FAFB',
+    marginBottom: 16,
+  },
+  chartContainer: {
+    backgroundColor: '#111827',
+    padding: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  chartBar: {
+    alignItems: 'center',
+  },
+  barContainer: {
+    height: 100,
+    width: 20,
+    backgroundColor: '#1f2937',
+    borderRadius: 4,
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  bar: {
+    width: '100%',
+    borderRadius: 4,
+  },
+  chartLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 2,
+  },
+  chartValue: {
+    fontSize: 14,
+    color: '#F9FAFB',
+    fontWeight: '600',
+  },
+  muscleGroupSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  muscleCard: {
+    backgroundColor: '#111827',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  muscleInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  muscleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F9FAFB',
+  },
+  muscleLastTrained: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  muscleStats: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  muscleFrequency: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#22c55e',
+    marginRight: 6,
+  },
+  muscleFrequencyLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: '#1f2937',
+    borderRadius: 2,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  actionSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  actionButton: {
+    backgroundColor: '#111827',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#22c55e33',
+  },
+  actionButtonText: {
+    color: '#22c55e',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

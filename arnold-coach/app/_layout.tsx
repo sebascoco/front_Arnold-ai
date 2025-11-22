@@ -29,6 +29,10 @@ export default function RootLayout() {
           name="session-chat"
           options={{ title: "Arnold - Sesión de entrenamiento" }}
         />
+        <Stack.Screen
+          name="detailed-metrics"
+          options={{ title: "Métricas Detalladas", headerShown: false }}
+        />
       </Stack>
     </>
   );
