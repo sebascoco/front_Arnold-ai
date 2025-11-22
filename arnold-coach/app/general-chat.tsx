@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { router } from "expo-router";
 import {
   View,
   Text,
@@ -180,6 +181,18 @@ export default function GeneralChatScreen() {
           contentContainerStyle={styles.messagesContainer}
         />
 
+        {/* Botón para ir a sesión de entrenamiento */}
+        <View style={styles.sessionButtonContainer}>
+          <TouchableOpacity
+            style={styles.sessionButton}
+            onPress={() => router.push("/session-chat")}
+          >
+            <Text style={styles.sessionButtonText}>
+              🏋️ Iniciar sesión de entrenamiento
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.inputRow}>
           <TextInput
             placeholder="Habla con Arnold..."
@@ -199,6 +212,7 @@ export default function GeneralChatScreen() {
               <Text style={styles.sendButtonText}>➤</Text>
             )}
           </TouchableOpacity>
+
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -317,6 +331,33 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "500",
+  },
+  sessionButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  sessionButton: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#22c55e",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  sessionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
   },
   inputRow: {
     position: "absolute",

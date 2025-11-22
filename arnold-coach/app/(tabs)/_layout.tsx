@@ -12,73 +12,25 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarButton: HapticTab,
         tabBarStyle: {
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: 12,
-          borderRadius: 999,
-          backgroundColor: "#020b1f",
-          borderTopWidth: 0,
-          borderWidth: 1,
-          borderColor: "#1e293b",
-          height: 62,
+          backgroundColor: '#020617',
+          borderTopColor: '#111827',
         },
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: ACCENT,
-        tabBarInactiveTintColor: INACTIVE,
-      }}
-    >
-      <Tabs.Screen
-        name="history"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name={focused ? "stats-chart" : "stats-chart-outline"}
-                size={22}
-                color={color}
-              />
-            </View>
-          ),
-        }}
-      />
-
+      }}>
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <View
-              style={[
-                styles.centerButton,
-                {
-                  backgroundColor: focused ? ACCENT : "#020617",
-                  shadowColor: ACCENT,
-                },
-              ]}
-            >
-              <Ionicons
-                name={focused ? "mic" : "mic-outline"}
-                size={26}
-                color={focused ? "#020617" : ACCENT}
-              />
-            </View>
-          ),
+          title: 'Inicio',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
 
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={22}
-                color={color}
-              />
-            </View>
-          ),
+          title: 'Progreso',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
     </Tabs>
