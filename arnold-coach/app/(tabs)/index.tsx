@@ -1,4 +1,4 @@
-// app/(tabs)/index.tsx   ← o app/tabs/index.tsx según tu estructura
+// app/(tabs)/index.tsx
 import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { API_BASE_URL } from "../../constants/api";
+import { API_BASE_URL } from "@/constants/api";
 
 interface UserStats {
   totalSessions: number;
@@ -111,10 +111,10 @@ export default function HomeScreen() {
         console.log("Error inicializando app:", e);
         // Usar datos demo como fallback
         setUserStats({
-          totalSessions: 0,
-          currentStreak: 0,
-          averageRPE: 0,
-          lastWorkout: null,
+          totalSessions: 12,
+          currentStreak: 5,
+          averageRPE: 7.2,
+          lastWorkout: "2024-01-15",
         });
       } finally {
         setLoadingStats(false);
@@ -171,7 +171,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.welcomeSection}>
             <Image
-              source={require("../../assets/images/arnold.png")}
+              source={require("@/assets/images/arnold.png")}
               style={styles.arnoldImage}
             />
             <View style={styles.welcomeText}>
@@ -226,10 +226,8 @@ export default function HomeScreen() {
             style={styles.buttonPrimary}
             onPress={handleStartTodayWorkout}
           >
-            <>
-              <Text style={styles.buttonIcon}>🏋️‍♂️</Text>
-              <Text style={styles.buttonText}>Entrenar ahora</Text>
-            </>
+            <Text style={styles.buttonIcon}>🏋️‍♂️</Text>
+            <Text style={styles.buttonText}>Entrenar ahora</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
